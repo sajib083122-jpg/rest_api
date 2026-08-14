@@ -4,15 +4,24 @@ from rest_framework.response import Response
 from product.models import Book
 from product.serializers import BookSerializer
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle    
+from rest_framework.pagination import PageNumberPagination  
 
 
 # Create your views here.
 
 class BookListView(APIView):
+    throttle_classes = [AnonRateThrottle, UserRateThrottle]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         books = Book.objects.all()
-        serializer = BookSerializer(books, many=True)
-        return Response(serializer.data)
+        paginator = PageNumberPagination()
+        paginator.page_size = 5  # Set the number of items per page
+        result_page = paginator.paginate_queryset(books, request)
+        serializer = BookSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         serializer = BookSerializer(data=request.data)
